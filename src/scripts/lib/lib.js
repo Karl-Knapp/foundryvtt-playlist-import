@@ -157,6 +157,16 @@ export function dialogWarning(message, icon = "fas fa-exclamation-triangle") {
     </p>`;
 }
 
+export function debugListOfFilePicker(msg, list = [0]) {
+  if (game.settings.get(CONSTANTS.MODULE_NAME, "debug")) {
+    for (var index in list) {
+      console.log(
+        `DEBUG | ${CONSTANTS.MODULE_NAME} | ${msg} | list => element number ${index} : ${list[index].target}`,
+      );
+    }
+  }
+  return msg;
+}
 // =====================================================
 
 export function createUploadFolderIfMissing(originFolder, uploadFolderPath) {

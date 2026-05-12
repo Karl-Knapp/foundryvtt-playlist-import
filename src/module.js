@@ -8,15 +8,18 @@ import {
   log,
   playlistDirectoryPrototypeOnDropHandler,
   createUploadFolderIfMissing,
+  debugListOfFilePicker,
 } from "./scripts/lib/lib.js";
 import { icon } from "@fortawesome/fontawesome-svg-core";
 
 let PLIMP = {};
+let isMultipleSelectClassPresent = false;
 
 class PlaylistImporterInitializer {
   constructor() {}
 
   static initialize() {
+    this.multipleSelectClassObserver = undefined;
     PlaylistImporterInitializer.hookInit();
     PlaylistImporterInitializer.hookReady();
     PlaylistImporterInitializer.hookRenderPlaylistDirectory();
@@ -25,12 +28,44 @@ class PlaylistImporterInitializer {
     PlaylistImporterInitializer.hookDeletePlaylistSound();
   }
 
+  // Multiple Document Selection method to tell if multiple selection is enable
+  static handleMultipleSelectMutations(mutationsList, observer) {
+    for (const mutation of mutationsList) {
+      // Check if the "class" attribute was modified
+      if (mutation.type === "attributes" && mutation.attributeName === "class") {
+        // Get the new and old class lists
+        // DOMTokenList
+        const newClassList = mutation.target.classList;
+        // Array
+        const oldClassList = mutation.oldValue?.split(" ") || [];
+        const multipleSelectClass = "multiple-select";
+
+        // Check if "multiple-select" is present
+        isMultipleSelectClassPresent =
+          !oldClassList.includes(multipleSelectClass) && newClassList.contains(multipleSelectClass);
+      }
+    }
+  }
+
   static hookRenderPlaylistDirectory() {
     /**
      * Appends a button onto the playlist to import songs.
      */
 
     Hooks.on("renderPlaylistDirectory", (app, html, data) => {
+      // Mutation Observer to check if the Multiple Selection Document module class is added
+      // => to tell if multiple selection is enable or not
+      // + Also add a duplication safenet => it check that we keep only one MutationObserver for the multiple selection
+      if (this.multipleSelectClassObserver == null || this.multipleSelectClassObserver == undefined) {
+        this.multipleSelectClassObserver = new MutationObserver(this.handleMultipleSelectMutations);
+        const observerOptions = {
+          attributes: true, // Watch for attribute changes
+          attributeFilter: ["class"], // Only watch the "class" attribute
+          attributeOldValue: true, // Include the old value of the attribute
+        };
+        this.multipleSelectClassObserver.observe(html, observerOptions);
+      }
+
       html.getElementsByClassName("directory-footer")[0].style.display = "inherit";
 
       // ADD IMPORT ALL BUTTON
@@ -75,6 +110,13 @@ class PlaylistImporterInitializer {
         directoriesList.className += ` ${CONSTANTS.MODULE_NAME}DirectoryList`;
         console.log(directoriesList);
         directoriesList.addEventListener("drop", (evt) => {
+          // Multiple Selection Document Patch to disable Drop event on playlist part when Multiple selection is enable
+          if (isMultipleSelectClassPresent == true) {
+            debug(`MULTIPLE SELECTION IS ENABLE : ${isMultipleSelectClassPresent}, So we stop DROP Event`);
+            debug;
+            return;
+          }
+
           debug("DROP EVENT on playlist tab directories list part");
           console.log(evt);
 
@@ -705,7 +747,7 @@ class PlaylistImporter {
     var countPlaylists = 0;
     var stack = [];
     stack.push(await foundry.applications.apps.FilePicker.implementation.browse(source, path));
-    debug("Stack of File Picker object : ", stack.toString());
+    debugListOfFilePicker("Stack of File Picker object : ", stack);
     while (stack.length > 0) {
       var fp = stack.pop();
 
@@ -899,9 +941,10 @@ class PlaylistImporter {
      */
     var stack = [];
     stack.push(await foundry.applications.apps.FilePicker.implementation.browse(source, path));
-    debug("Stack of File Picker object : ", stack.toString());
     while (stack.length > 0) {
+      debugListOfFilePicker("Stack of File Picker object : ", stack);
       var fp = stack.pop();
+      debug("_____Poped element from stack : ", fp.target);
 
       // GET PARENT FOLDER (if it exist)
       var currentFoundryFolder = await game.folders.getName(fp.target);
