@@ -970,7 +970,7 @@ class PlaylistImporter {
 
         //// Folder creation part
         var newPlaylistFolder = await Folder.create({
-          name: dir,
+          name: PlaylistImporter._convertToUserFriendly(PlaylistImporter._getBaseName(dir)),
           type: "Playlist",
           folder: parentfolderId,
           color: PlaylistImporter._getRandomColor(),
@@ -985,14 +985,14 @@ class PlaylistImporter {
 
       // PLAYLISTS CREATION AND TAGGING
       //// check if the playlist already exist and ShouldOvveride setting
-      var pl = game.playlists.getName(fp.target);
+      var pl = game.playlists.getName(PlaylistImporter._convertToUserFriendly(PlaylistImporter._getBaseName(fp.target)));
       if (shouldOverride == true && pl != undefined) {
         ////// the playlist already exist, we skip the creation and will update it instead
         debug(
           `Playlist : ${pl} in folder : ${currentFoundryFolder != undefined ? currentFoundryFolder.name : "root"} already exist, we override it instead`,
         );
       } else {
-        pl = await Playlist.create({ name: fp.target, folder: parentfolderId, mode: shouldStream ? 0 : -1 });
+        pl = await Playlist.create({ name: PlaylistImporter._convertToUserFriendly(PlaylistImporter._getBaseName(fp.target)), folder: parentfolderId, mode: shouldStream ? 0 : -1 });
         await pl.setFlag(CONSTANTS.MODULE_NAME, "isPlaylistImported", true);
         debug(
           `Created playlist : ${pl} in folder : ${currentFoundryFolder != undefined ? currentFoundryFolder.name : "root"}`,
