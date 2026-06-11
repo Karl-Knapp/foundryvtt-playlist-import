@@ -331,20 +331,6 @@ class PlaylistImporter {
   }
 
   /**
-   * @name _getRandomColor
-   * @returns A random Color in hexadecimal RGB for Foundry (exemple RED = #ff0000)
-   */
-  static _getRandomColor() {
-    let result = "#";
-    const hexNumbers = "0123456789abcdef";
-    const hexLength = hexNumbers.length + 1; // for range [0, 17[ for random;
-    for (let i = 0; i < 6; i++) {
-      result += hexNumbers.charAt(Math.floor(Math.random() * hexLength));
-    }
-    return result;
-  }
-
-  /**
    * Validates the audio extension to be of type 'CONST.AUDIO_FILE_EXTENSIONS'
    * @private
    * @param {string} fileName
@@ -947,7 +933,9 @@ class PlaylistImporter {
       debug("_____Poped element from stack : ", fp.target);
 
       // GET PARENT FOLDER (if it exist)
-      var currentFoundryFolder = await game.folders.getName(fp.target);
+      var currentFoundryFolder = game.folders.getName(
+        PlaylistImporter._convertToUserFriendly(PlaylistImporter._getBaseName(fp.target)),
+      );
       var parentfolderId =
         currentFoundryFolder != undefined && currentFoundryFolder.type === "Playlist" ? currentFoundryFolder.id : null;
 
@@ -973,7 +961,7 @@ class PlaylistImporter {
           name: PlaylistImporter._convertToUserFriendly(PlaylistImporter._getBaseName(dir)),
           type: "Playlist",
           folder: parentfolderId,
-          color: PlaylistImporter._getRandomColor(),
+          color: "#000000",
         });
         newPlaylistFolder.setFlag(CONSTANTS.MODULE_NAME, "isPlaylistImported", true);
         debug(
@@ -985,14 +973,20 @@ class PlaylistImporter {
 
       // PLAYLISTS CREATION AND TAGGING
       //// check if the playlist already exist and ShouldOvveride setting
-      var pl = game.playlists.getName(PlaylistImporter._convertToUserFriendly(PlaylistImporter._getBaseName(fp.target)));
+      var pl = game.playlists.getName(
+        PlaylistImporter._convertToUserFriendly(PlaylistImporter._getBaseName(fp.target)),
+      );
       if (shouldOverride == true && pl != undefined) {
         ////// the playlist already exist, we skip the creation and will update it instead
         debug(
           `Playlist : ${pl} in folder : ${currentFoundryFolder != undefined ? currentFoundryFolder.name : "root"} already exist, we override it instead`,
         );
       } else {
-        pl = await Playlist.create({ name: PlaylistImporter._convertToUserFriendly(PlaylistImporter._getBaseName(fp.target)), folder: parentfolderId, mode: shouldStream ? 0 : -1 });
+        pl = await Playlist.create({
+          name: PlaylistImporter._convertToUserFriendly(PlaylistImporter._getBaseName(fp.target)),
+          folder: parentfolderId,
+          mode: shouldStream ? 0 : -1,
+        });
         await pl.setFlag(CONSTANTS.MODULE_NAME, "isPlaylistImported", true);
         debug(
           `Created playlist : ${pl} in folder : ${currentFoundryFolder != undefined ? currentFoundryFolder.name : "root"}`,
